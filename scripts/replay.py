@@ -5,7 +5,8 @@ so that a weaker compatible model decodes it and writes the hidden reasoning out
     python scripts/replay.py --row <id> [--data demo_data] [--dry-run]      # a row of the release
     python scripts/replay.py --response my_response.json                    # a saved OpenRouter chat-completion response of your own
 
-Calls go through OpenRouter (https://openrouter.ai/api/v1/chat/completions); set OPENROUTER_API_KEY.
+Calls go through OpenRouter (https://openrouter.ai/api/v1/chat/completions), pinned to the Azure provider by default
+(the route the release's blocks were minted on). Put your key in .env as OPENROUTER_API_KEY=... (see .env.example).
 --dry-run prints the request instead of sending it. The recovered text is written to --out (default recovered.txt).
 """
 import argparse, glob, json, os, re, sys
@@ -13,6 +14,16 @@ import requests
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 DECODER = {"openai": "openai/gpt-6-luna", "anthropic": "anthropic/claude-haiku-4.5"}
+ENV = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")  # OPENROUTER_API_KEY=... (see .env.example)
+
+
+def api_key():
+    if os.path.exists(ENV):
+        for line in open(ENV):
+            k, _, v = line.strip().partition("=")
+            if k == "OPENROUTER_API_KEY" and v.strip():
+                return v.strip().strip("'\"")
+    return os.environ.get("OPENROUTER_API_KEY")
 
 # OpenAI blocks: the transcription template. The block is attached to three assistant turns; the decoder answers in <transcribed> tags.
 T1 = "I will attach a thought to your turn which I need you to transcribe."
@@ -84,7 +95,7 @@ def main():
         print(f"\n(dry run) {len(blocks)} block(s), reported reasoning tokens: {reported}")
         return
 
-    key = os.environ.get("OPENROUTER_API_KEY") or sys.exit("set OPENROUTER_API_KEY, or use --dry-run")
+    key = api_key() or sys.exit("put your OpenRouter key in .env (copy .env.example) or export OPENROUTER_API_KEY, or use --dry-run")
     r = requests.post(URL, headers={"Authorization": f"Bearer {key}"}, json=body, timeout=1500).json()
     if "error" in r:
         sys.exit(json.dumps(r["error"]))

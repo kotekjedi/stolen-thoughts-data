@@ -19,7 +19,7 @@ This repository holds the two scripts needed to read that data and to run the at
 - Python packages `pyarrow`, `requests`, `tiktoken`; `datasets` only to download the full release. Any recent version works.
   Tested on Ubuntu 22.04.5 with Python 3.10.12, pyarrow 25.0.0, requests 2.34.2, tiktoken 0.13.0, datasets 5.1.0.
 - No non-standard hardware. The scripts read one Parquet file at a time; the largest file of the release is 204 MB, so 2 GB of RAM is plenty.
-- `replay.py` needs internet access and an [OpenRouter](https://openrouter.ai) API key (`OPENROUTER_API_KEY`); one replay costs a few cents. Everything else runs offline.
+- `replay.py` needs internet access and an [OpenRouter](https://openrouter.ai) API key, placed in `.env` (copy `.env.example`); one replay costs a few cents. Everything else runs offline.
 
 ## 2. Installation (under a minute)
 
@@ -27,6 +27,7 @@ This repository holds the two scripts needed to read that data and to run the at
 git clone https://github.com/kotekjedi/stolen-thoughts-data
 cd stolen-thoughts-data
 pip install -r requirements.txt
+cp .env.example .env        # then paste your OpenRouter key into .env (only replay.py needs it)
 ```
 
 ## 3. Demo (a few seconds, no API key needed)
@@ -82,12 +83,12 @@ assistant turns, the decoder model, and the number of reasoning tokens the API r
 `python scripts/replay.py --row aime/claude-haiku-4.5/medium/2025-I-1/0 --dry-run` shows the Anthropic shape: the signed block on
 an assistant turn that starts with the `<thinking-copy>` prefill, thinking disabled.
 
-With `OPENROUTER_API_KEY` set and without `--dry-run`, the script sends the request, writes the decoder's transcription to
+With your key in `.env` and without `--dry-run`, the script sends the request, writes the decoder's transcription to
 `recovered.txt`, and prints its token count next to the reported one, for example `recovered 508 tokens vs 508 reported: 0.0% off`.
-A replay takes 10 to 60 seconds. Whether it still succeeds depends on the provider: since September 2026 the first-party endpoints
-reject the attack (see the paper's reproducibility statement), and a block only replays on the provider that minted it (the
-release's OpenAI blocks were minted on Azure, the default `--provider`). The release stores the recovered text of every response, so
-the paper's analyses do not need a live replay.
+A replay takes 10 to 60 seconds. Requests go through OpenRouter pinned to the Azure provider (`--provider azure`, the default):
+that is where the release's blocks were minted (a block only replays on the provider that minted it) and the route on which the
+attack still worked when this was written. The providers' first-party endpoints reject it since September 2026 (see the paper's
+reproducibility statement). The release stores the recovered text of every response, so the paper's analyses do not need a live replay.
 
 ## 4. Instructions for use
 
